@@ -4,6 +4,7 @@ package vanceai
 
 import (
 	"context"
+	"io"
 	"os"
 	"testing"
 
@@ -13,7 +14,7 @@ import (
 
 // first, you need to set API_KEY environment variable
 // https://vanceai.com/ja/my-account/api/
-func TestClient_Upload(t *testing.T) {
+func TestClient_Upload_Process_Check_Download(t *testing.T) {
 	cli, err := NewClient(os.Getenv("API_KEY"), "")
 	if err != nil {
 		t.Fatal(err)
@@ -105,5 +106,28 @@ func TestClient_Upload(t *testing.T) {
 		),
 	); diff != "" {
 		t.Errorf("response mismatch (-want +got):\n%s", diff)
+	}
+
+	// download image
+	dresp, err := cli.Download(context.Background(), presp.Data.TransID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dresp == nil {
+		t.Fatal("response is nil")
+	}
+	d := t.TempDir()
+	f, err := os.Create(d + "/cat.jpg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	written, err := io.Copy(f, dresp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if written <= uresp.Data.FileSize {
+		// enlarged image size is larger than original image size
+		t.Errorf("written size mismatch: want %d, got %d", sresp.Data.FileSize, written)
 	}
 }

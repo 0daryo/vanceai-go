@@ -31,67 +31,12 @@ func NewClient(apiKey, processWebhook string) (*Client, error) {
 	}, nil
 }
 
-type Response struct {
-	Code   int64       `json:"code"`
-	CSCode int64       `json:"cscode"`
-	IP     string      `json:"ip"`
-	Data   Data        `json:"data"`
-	Msg    interface{} `json:"msg"`
-}
-
-func (resp *Response) MsgString() string {
-	if resp.Msg == nil {
-		return ""
-	}
-	msg, ok := resp.Msg.(string)
-	if ok {
-		return msg
-	}
-	return fmt.Sprintf("%v", resp.Msg)
-}
-
-type Data struct {
-	UID       string `json:"uid"`
-	Name      string `json:"name"`
-	Thumbnail string `json:"thumbnail"`
-	W         int64  `json:"w"`
-	H         int64  `json:"h"`
-	FileSize  int64  `json:"filesize"`
-	TransID   string `json:"trans_id"`
-	Status    string `json:"status"`
-}
-
-type JobConfig struct {
-	Job    string `json:"job"`
-	Config Config `json:"config"`
-}
-
 func (jc *JobConfig) jsonString() (string, error) {
 	b, err := json.Marshal(jc)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal job config: %w", err)
 	}
 	return string(b), nil
-}
-
-type Config struct {
-	Module       string       `json:"module"`
-	ModuleParams ModuleParams `json:"module_params"`
-	OutParams    OutParams    `json:"out_params"`
-}
-type OutParams struct{}
-
-type ModuleParams struct {
-	ModelName     string `json:"model_name"`
-	SuppressNoise int64  `json:"suppress_noise"`
-	RemoveBlur    int64  `json:"remove_blur"`
-	Scale         string `json:"scale"`
-}
-type ProcessRequest struct {
-	APIToken  string `json:"api_token"`
-	UID       string `json:"uid"`
-	Webhook   string `json:"webhook"`
-	JobConfig string `json:"jconfig"`
 }
 
 func (cli *Client) UploadImage(
@@ -109,9 +54,10 @@ func (cli *Client) UploadImage(
 	if err != nil {
 		return Response{}, fmt.Errorf("failed to copy file: %w", err)
 	}
-	_ = writer.WriteField("api_token", cli.APIKey)
-	err = writer.Close()
-	if err != nil {
+	if err := writer.WriteField("api_token", cli.APIKey); err != nil {
+		return Response{}, fmt.Errorf("failed to write field api_token: %w", err)
+	}
+	if err := writer.Close(); err != nil {
 		return Response{}, fmt.Errorf("failed to close writer: %w", err)
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, cli.BaseURL.String()+"/upload", body)
@@ -170,11 +116,6 @@ func (cli *Client) ProcessImage(
 	return resStruct, nil
 }
 
-type ProgressRequest struct {
-	APIToken string `json:"api_token"`
-	TransID  string `json:"trans_id"`
-}
-
 func (cli *Client) GetProgress(
 	ctx context.Context,
 	transID string,
@@ -204,4 +145,32 @@ func (cli *Client) GetProgress(
 		return Response{}, fmt.Errorf("failed to get progress error code returned%s: %w", resStruct.MsgString(), err)
 	}
 	return resStruct, nil
+}
+
+func (cli *Client) Download(ctx context.Context, transID string) (io.ReadCloser, error) {
+	payload := &bytes.Buffer{}
+	writer := multipart.NewWriter(payload)
+	if err := writer.WriteField("api_token", cli.APIKey); err != nil {
+		return nil, fmt.Errorf("failed to write field api_token: %w", err)
+	}
+	if err := writer.WriteField("trans_id", transID); err != nil {
+		return nil, fmt.Errorf("failed to write field trans_id: %w", err)
+	}
+	if err := writer.Close(); err != nil {
+		return nil, fmt.Errorf("failed to close writer: %w", err)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, cli.BaseURL.String()+"/download", payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	resp, err := cli.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to do request: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to download image: %s", resp.Status)
+	}
+	return resp.Body, nil
 }
