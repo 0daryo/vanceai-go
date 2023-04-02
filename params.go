@@ -50,7 +50,11 @@ type ModuleParams struct {
 	SuppressNoise int64  `json:"suppress_noise"`
 	RemoveBlur    int64  `json:"remove_blur"`
 	Scale         string `json:"scale"`
-	Rescale       int64
+	Rescale       int64  `json:"rescale"`
+	SingleFace    bool   `json:"single_face"`
+	Composite     bool   `json:"composite"`
+	Sigma         int64  `json:"sigma"`
+	Alpha         int64  `json:"alpha"`
 }
 type ProcessRequest struct {
 	APIToken  string `json:"api_token"`
