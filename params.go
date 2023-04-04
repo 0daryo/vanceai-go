@@ -30,6 +30,8 @@ type Data struct {
 	FileSize  int64  `json:"filesize"`
 	TransID   string `json:"trans_id"`
 	Status    Status `json:"status"`
+	MaxNum    string `json:"max_num"`
+	UsedNum   string `json:"used_num"`
 }
 
 type JobConfig struct {
