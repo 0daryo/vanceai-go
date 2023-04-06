@@ -31,7 +31,19 @@ func NewClient(apiKey, processWebhook string) (*Client, error) {
 	}, nil
 }
 
+type job interface {
+	jsonString() (string, error)
+}
+
 func (jc *JobConfig) jsonString() (string, error) {
+	b, err := json.Marshal(jc)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal job config: %w", err)
+	}
+	return string(b), nil
+}
+
+func (jc *MultipleJob) jsonString() (string, error) {
 	b, err := json.Marshal(jc)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal job config: %w", err)
@@ -82,7 +94,7 @@ func (cli *Client) UploadImage(
 func (cli *Client) ProcessImage(
 	ctx context.Context,
 	uid string,
-	jobConfig JobConfig,
+	jobConfig job,
 ) (Response, error) {
 	jc, err := jobConfig.jsonString()
 	if err != nil {

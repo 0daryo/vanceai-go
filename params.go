@@ -40,12 +40,28 @@ type JobConfig struct {
 	Config Config `json:"config"`
 }
 
+type MultipleJob struct {
+	Job    string         `json:"job"`
+	Config []SingleConfig `json:"config"`
+}
+
+type SingleConfig struct {
+	Name   string `json:"name"`
+	Config Config `json:"config"`
+}
+
 type Config struct {
 	Module       string       `json:"module"`
 	ModuleParams ModuleParams `json:"module_params"`
 	OutParams    OutParams    `json:"out_params"`
 }
-type OutParams struct{}
+type OutParams struct {
+	Compress Compress `json:"compress"`
+}
+
+type Compress struct {
+	Quality int64 `json:"quality"`
+}
 
 type ModuleParams struct {
 	ModelName     string `json:"model_name"`
@@ -57,6 +73,8 @@ type ModuleParams struct {
 	Composite     bool   `json:"composite"`
 	Sigma         int64  `json:"sigma"`
 	Alpha         int64  `json:"alpha"`
+	AutoMode      bool   `json:"auto_mode"`
+	WebAutoMode   bool   `json:"web_auto_mode"`
 }
 type ProcessRequest struct {
 	APIToken  string `json:"api_token"`

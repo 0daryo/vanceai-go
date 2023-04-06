@@ -29,18 +29,39 @@ func main() {
 	fmt.Printf("upload finished: %+v\n", uresp)
 
 	// process image
-	presp, err := cli.ProcessImage(context.Background(), uresp.Data.UID, vanceai.JobConfig{
-		Job: "sketch",
-		Config: vanceai.Config{
-			Module: "sketch",
-			ModuleParams: vanceai.ModuleParams{
-				ModelName:  "SketchStable",
-				SingleFace: false,
-				Composite:  true,
-				Sigma:      0,
-				Alpha:      0,
+	presp, err := cli.ProcessImage(context.Background(), uresp.Data.UID, &vanceai.MultipleJob{
+		Job: "workflow",
+		Config: []vanceai.SingleConfig{
+			{
+				Name: "sketch",
+				Config: vanceai.Config{
+					Module: "sketch",
+					ModuleParams: vanceai.ModuleParams{
+						ModelName:  "SketchStable",
+						SingleFace: true,
+						Composite:  true,
+						Sigma:      0,
+						Alpha:      0,
+					},
+					OutParams: vanceai.OutParams{},
+				},
 			},
-			OutParams: vanceai.OutParams{},
+			{
+				Name: "matting",
+				Config: vanceai.Config{
+					Module: "matting",
+					ModuleParams: vanceai.ModuleParams{
+						ModelName:   "MattingStable",
+						Rescale:     532,
+						WebAutoMode: false,
+					},
+					OutParams: vanceai.OutParams{
+						Compress: vanceai.Compress{
+							Quality: 100,
+						},
+					},
+				},
+			},
 		},
 	})
 	if err != nil {
@@ -77,4 +98,10 @@ func main() {
 		panic(err)
 	}
 	fmt.Printf("download finished: directory is %s\n", d)
+
+	cresp, err := cli.GetPoint(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("get point: %+v\n", cresp)
 }

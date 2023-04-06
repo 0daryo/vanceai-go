@@ -53,7 +53,7 @@ func TestClient_Upload_Process_Check_Download(t *testing.T) {
 	}
 
 	// process image
-	presp, err := cli.ProcessImage(context.Background(), uresp.Data.UID, JobConfig{
+	presp, err := cli.ProcessImage(context.Background(), uresp.Data.UID, &JobConfig{
 		Job: "enlarge",
 		Config: Config{
 			Module: "enlarge",
